@@ -124,7 +124,7 @@
 }
 
 - (void)textViewDidChange:(UITextView *)textView {
-    [_channel invokeMethod:@"inputValueChanged" arguments:@{ @"text": textView.text }];
+    [_channel invokeMethod:@"inputValueChanged" arguments:@{ @"text": textView.text, @"cursorPosition": @(textView.selectedRange.location) }];
 }
 
 - (void)textViewDidEndEditing:(UITextView *)textView {

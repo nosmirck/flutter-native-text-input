@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 enum ReturnKeyType {
   defaultAction,
@@ -352,6 +353,12 @@ class _NativeTextInputState extends State<NativeTextInput> {
           creationParamsCodec: const StandardMessageCodec(),
           creationParams: _buildCreationParams(layout),
           onPlatformViewCreated: _createMethodChannel,
+          hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+            Factory<OneSequenceGestureRecognizer>(
+              () => EagerGestureRecognizer(),
+            )
+          },
         );
       default:
         return CupertinoTextField(
@@ -482,7 +489,7 @@ class _NativeTextInputState extends State<NativeTextInput> {
       params = {
         ...params,
         "placeholderFontFamily":
-        widget.iosOptions?.placeholderStyle?.fontFamily.toString(),
+            widget.iosOptions?.placeholderStyle?.fontFamily.toString(),
       };
     }
 
@@ -532,7 +539,9 @@ class _NativeTextInputState extends State<NativeTextInput> {
       case "inputValueChanged":
         final String? text = call.arguments["text"];
         final int? lineIndex = call.arguments["currentLine"];
-        _inputValueChanged(text, lineIndex);
+        final cursorPosition = call.arguments["cursorPosition"];
+
+        _inputValueChanged(text, lineIndex, cursorPosition);
         return null;
 
       case "inputStarted":
@@ -590,9 +599,13 @@ class _NativeTextInputState extends State<NativeTextInput> {
     }
   }
 
-  void _inputValueChanged(String? text, int? lineIndex) async {
+  void _inputValueChanged(
+      String? text, int? lineIndex, int? cursorPosition) async {
     if (text != null) {
       _effectiveController.text = text;
+      _effectiveController.value = _effectiveController.value.copyWith(
+          selection:
+              TextSelection.collapsed(offset: cursorPosition ?? text.length));
       if (widget.onChanged != null) widget.onChanged!(text);
 
       final channel = await _channel.future;
@@ -610,7 +623,7 @@ class _NativeTextInputState extends State<NativeTextInput> {
   static const Curve _caretAnimationCurve = Curves.fastOutSlowIn;
 
   void _scrollIntoView() {
-    SchedulerBinding.instance.addPostFrameCallback((_) {
+    SchedulerBinding.instance?.addPostFrameCallback((_) {
       context.findRenderObject()!.showOnScreen(
             duration: _caretAnimationDuration,
             curve: _caretAnimationCurve,
