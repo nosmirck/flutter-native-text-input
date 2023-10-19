@@ -105,6 +105,8 @@
         [self onFocus:call result:result];
     } else if ([[call method] isEqualToString:@"setText"]) {
         [self onSetText:call result:result];
+    }else if ([[call method] isEqualToString:@"setColor"]) {
+        [self onSetColor:call result:result];
     } else {
         result(FlutterMethodNotImplemented);
     }
@@ -123,12 +125,19 @@
 
 - (void)onSetText:(FlutterMethodCall*)call result:(FlutterResult)result {
     _textView.text = call.arguments[@"text"];
-    _textView.textColor = _delegate.fontColor;
     _textView.font = _delegate.font;
     
     if (_textView.textContainer.maximumNumberOfLines == 1) {
         _textView.textContainer.lineBreakMode = NSLineBreakByTruncatingTail;
     }
+    result(nil);
+}
+
+- (void)onSetColor:(FlutterMethodCall*)call result:(FlutterResult)result {
+     NSDictionary* fontColor = call.arguments[@"fontColor"];
+    UIColor* _fontColor = [UIColor colorWithRed:[fontColor[@"red"] floatValue]/255.0 green:[fontColor[@"green"] floatValue]/255.0 blue:[fontColor[@"blue"] floatValue]/255.0 alpha:[fontColor[@"alpha"] floatValue]/255.0];
+    _textView.textColor = _fontColor;
+    _textView.font = _delegate.font;
     result(nil);
 }
 

@@ -274,12 +274,60 @@ class _NativeTextInputState extends State<NativeTextInput> {
       widget.controller ?? (_controller ??= TextEditingController());
 
   FocusNode? _focusNode;
-  FocusNode get _effectiveFocusNode =>
-      widget.focusNode ?? (_focusNode ??= FocusNode());
+  FocusNode get _effectiveFocusNode {
+    if (widget.focusNode != null) {
+      _focusNode = widget.focusNode;
+    } else {
+      _focusNode ??= FocusNode();
+    }
+    return _focusNode!;
+  }
 
   bool get _isMultiline => widget.maxLines == 0 || widget.maxLines > 1;
   double _lineHeight = 22.0;
   double _contentHeight = 22.0;
+
+  @override
+  void didUpdateWidget(NativeTextInput oldWidget) {
+    print('didUpdateWidget');
+    super.didUpdateWidget(oldWidget);
+
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller?.removeListener(_controllerListener);
+      widget.controller?.addListener(_controllerListener);
+    }
+    if (widget.focusNode != oldWidget.focusNode) {
+      oldWidget.focusNode?.removeListener(_focusNodeListener);
+      _focusNode = null;
+      _effectiveFocusNode.addListener(_focusNodeListener);
+    }
+    if (widget.style != oldWidget.style) {
+      _channel.future.then((channel) => channel.invokeMethod(
+            "setColor",
+            {
+              "fontColor": {
+                "red": widget.style?.color?.red,
+                "green": widget.style?.color?.green,
+                "blue": widget.style?.color?.blue,
+                "alpha": widget.style?.color?.alpha,
+              },
+            },
+          ));
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    print('didChangeDependencies');
+    super.didChangeDependencies();
+
+    _effectiveController.removeListener(_controllerListener);
+    widget.controller?.addListener(_controllerListener);
+
+    _focusNode?.removeListener(_focusNodeListener);
+    _focusNode = null;
+    _effectiveFocusNode.addListener(_focusNodeListener);
+  }
 
   @override
   void initState() {
@@ -323,6 +371,7 @@ class _NativeTextInputState extends State<NativeTextInput> {
   }
 
   Widget _platformView(BoxConstraints layout) {
+    print('_platformView');
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return PlatformViewLink(
@@ -348,10 +397,12 @@ class _NativeTextInputState extends State<NativeTextInput> {
           },
         );
       case TargetPlatform.iOS:
+        final params = _buildCreationParams(layout);
+        print(params['fontColor']);
         return UiKitView(
           viewType: NativeTextInput.viewType,
           creationParamsCodec: const StandardMessageCodec(),
-          creationParams: _buildCreationParams(layout),
+          creationParams: params,
           onPlatformViewCreated: _createMethodChannel,
           hitTestBehavior: PlatformViewHitTestBehavior.opaque,
           gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
@@ -383,6 +434,8 @@ class _NativeTextInputState extends State<NativeTextInput> {
 
   @override
   Widget build(BuildContext context) {
+    print('build');
+
     return ConstrainedBox(
       constraints: BoxConstraints(
         minHeight: _minHeight,
