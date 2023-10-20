@@ -116,6 +116,7 @@ class NativeTextInput extends StatefulWidget {
     this.onEditingComplete,
     this.onSubmitted,
     this.onTap,
+    this.maxLength = -1,
   }) : super(key: key);
 
   /// Controlling the text being edited
@@ -229,6 +230,8 @@ class NativeTextInput extends StatefulWidget {
   ///
   /// Default: null
   final VoidCallback? onTap;
+
+  final int maxLength;
 
   @override
   State<StatefulWidget> createState() => _NativeTextInputState();
@@ -655,6 +658,9 @@ class _NativeTextInputState extends State<NativeTextInput> {
   void _inputValueChanged(
       String? text, int? lineIndex, int? cursorPosition) async {
     if (text != null) {
+      if (text.length > widget.maxLength && widget.maxLength > 0) {
+        text = _effectiveController.text;
+      }
       _effectiveController.text = text;
       _effectiveController.value = _effectiveController.value.copyWith(
           selection:
