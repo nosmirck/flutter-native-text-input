@@ -116,9 +116,9 @@ class NativeTextInput extends StatefulWidget {
     this.onEditingComplete,
     this.onSubmitted,
     this.onTap,
-    int? maxLength,
-  })  : this.maxLength = maxLength ?? -1,
-        super(key: key);
+    this.maxLength = -1,
+    this.obscureText = false,
+  }) : super(key: key);
 
   /// Controlling the text being edited
   /// (https://api.flutter.dev/flutter/material/TextField/controller.html)
@@ -233,6 +233,8 @@ class NativeTextInput extends StatefulWidget {
   final VoidCallback? onTap;
 
   final int maxLength;
+
+  final bool obscureText;
 
   @override
   State<StatefulWidget> createState() => _NativeTextInputState();
@@ -401,17 +403,43 @@ class _NativeTextInputState extends State<NativeTextInput> {
         );
       case TargetPlatform.iOS:
         final params = _buildCreationParams(layout);
-        return UiKitView(
-          viewType: NativeTextInput.viewType,
-          creationParamsCodec: const StandardMessageCodec(),
-          creationParams: params,
-          onPlatformViewCreated: _createMethodChannel,
-          hitTestBehavior: PlatformViewHitTestBehavior.opaque,
-          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-            Factory<OneSequenceGestureRecognizer>(
-              () => EagerGestureRecognizer(),
-            )
-          },
+        return Stack(
+          children: [
+            UiKitView(
+              viewType: NativeTextInput.viewType,
+              creationParamsCodec: const StandardMessageCodec(),
+              creationParams: params,
+              onPlatformViewCreated: _createMethodChannel,
+              hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
+                )
+              },
+            ),
+            if (widget.obscureText)
+              IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: widget.controller!,
+                  builder: (context, child) {
+                    return Padding(
+                      padding: const EdgeInsets.all(1.0),
+                      child: SizedBox(
+                        width: widget.controller!.text.length > 0
+                            ? double.infinity
+                            : null,
+                        height: double.infinity,
+                        child: ColoredBox(
+                          color: widget.decoration?.color ??
+                              Theme.of(context).canvasColor,
+                          child: Text('•' * widget.controller!.text.length),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
         );
       default:
         return CupertinoTextField(
