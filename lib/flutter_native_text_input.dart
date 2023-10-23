@@ -116,8 +116,9 @@ class NativeTextInput extends StatefulWidget {
     this.onEditingComplete,
     this.onSubmitted,
     this.onTap,
-    this.maxLength = -1,
-  }) : super(key: key);
+    int? maxLength,
+  })  : this.maxLength = maxLength ?? -1,
+        super(key: key);
 
   /// Controlling the text being edited
   /// (https://api.flutter.dev/flutter/material/TextField/controller.html)
@@ -292,7 +293,6 @@ class _NativeTextInputState extends State<NativeTextInput> {
 
   @override
   void didUpdateWidget(NativeTextInput oldWidget) {
-    print('didUpdateWidget');
     super.didUpdateWidget(oldWidget);
 
     if (widget.controller != oldWidget.controller) {
@@ -321,7 +321,6 @@ class _NativeTextInputState extends State<NativeTextInput> {
 
   @override
   void didChangeDependencies() {
-    print('didChangeDependencies');
     super.didChangeDependencies();
 
     _effectiveController.removeListener(_controllerListener);
@@ -342,7 +341,9 @@ class _NativeTextInputState extends State<NativeTextInput> {
 
   @override
   void dispose() {
-    _effectiveFocusNode.removeListener(_focusNodeListener);
+    try {
+      _effectiveFocusNode.removeListener(_focusNodeListener);
+    } catch (e) {}
     widget.controller?.removeListener(_controllerListener);
 
     _controller?.dispose();
@@ -374,7 +375,6 @@ class _NativeTextInputState extends State<NativeTextInput> {
   }
 
   Widget _platformView(BoxConstraints layout) {
-    print('_platformView');
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return PlatformViewLink(
@@ -401,7 +401,6 @@ class _NativeTextInputState extends State<NativeTextInput> {
         );
       case TargetPlatform.iOS:
         final params = _buildCreationParams(layout);
-        print(params['fontColor']);
         return UiKitView(
           viewType: NativeTextInput.viewType,
           creationParamsCodec: const StandardMessageCodec(),
@@ -437,8 +436,6 @@ class _NativeTextInputState extends State<NativeTextInput> {
 
   @override
   Widget build(BuildContext context) {
-    print('build');
-
     return ConstrainedBox(
       constraints: BoxConstraints(
         minHeight: _minHeight,
@@ -658,9 +655,7 @@ class _NativeTextInputState extends State<NativeTextInput> {
   void _inputValueChanged(
       String? text, int? lineIndex, int? cursorPosition) async {
     if (text != null) {
-      if (text.length > widget.maxLength && widget.maxLength > 0) {
-        text = _effectiveController.text;
-      }
+      text = truncateToLimit(_effectiveController.text, text, widget.maxLength);
       _effectiveController.text = text;
       _effectiveController.value = _effectiveController.value.copyWith(
           selection:
@@ -688,5 +683,69 @@ class _NativeTextInputState extends State<NativeTextInput> {
             curve: _caretAnimationCurve,
           );
     });
+  }
+}
+
+String truncateToLimit(String str1, String str2, int maxLength) {
+  if (maxLength < 1 ||
+      str2.length <= maxLength ||
+      (str2.length <= str1.length && str1.length <= maxLength)) {
+    return str2;
+  }
+
+  var difference = '';
+  var part1 = '';
+  var part2 = '';
+  if (str2.startsWith(str1)) {
+    difference = str2.substring(str1.length);
+    part1 = str1;
+  } else if (str2.endsWith(str1)) {
+    difference = str2.substring(0, str2.length - str1.length);
+    part2 = str1;
+  } else {
+    int commonLength = 0;
+
+    while (commonLength < str1.length) {
+      if (str1[commonLength] != str2[commonLength]) {
+        break;
+      }
+      commonLength++;
+    }
+
+    int s2i = str2.length - 1;
+    int s1i = str1.length - 1;
+
+    while (s2i > commonLength) {
+      if (str1[s1i] == str2[s2i]) {
+        s1i--;
+        s2i--;
+      } else {
+        break;
+      }
+    }
+
+    difference = str2.substring(commonLength, s2i + 1);
+    part1 = str1.substring(0, commonLength);
+    part2 = str1.substring(s1i + 1);
+  }
+
+  final partialLength = part1.length + part2.length;
+  final truncatedLength = maxLength - partialLength;
+
+  if (truncatedLength <= 0) {
+    return str1;
+  }
+  if (str2 == '$part1$difference$part2') {
+    return '$part1${difference.substring(0, truncatedLength)}$part2'
+        .substring(0, maxLength);
+  } else if (str2 == '$part1$difference $part2') {
+    return '$part1${difference.substring(0, truncatedLength - 1)} $part2'
+        .substring(0, maxLength);
+  } else if (str2 == '$part1 $difference$part2') {
+    return '$part1 ${difference.substring(0, truncatedLength - 1)}$part2'
+        .substring(0, maxLength);
+  } else {
+    return '$part1${difference.substring(0, truncatedLength)}$part2'
+        .substring(0, maxLength);
   }
 }
