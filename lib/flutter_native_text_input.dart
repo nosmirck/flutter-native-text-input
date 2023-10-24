@@ -432,7 +432,10 @@ class _NativeTextInputState extends State<NativeTextInput> {
                         child: ColoredBox(
                           color: widget.decoration?.color ??
                               Theme.of(context).canvasColor,
-                          child: Text('•' * widget.controller!.text.length),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 2),
+                            child: Text('•' * widget.controller!.text.length),
+                          ),
                         ),
                       ),
                     );
