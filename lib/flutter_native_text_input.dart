@@ -433,7 +433,7 @@ class _NativeTextInputState extends State<NativeTextInput> {
                           color: widget.decoration?.color ??
                               Theme.of(context).canvasColor,
                           child: Padding(
-                            padding: const EdgeInsets.only(top: 4, left: 2),
+                            padding: const EdgeInsets.only(top: 4, left: 4),
                             child: Text('•' * widget.controller!.text.length),
                           ),
                         ),
