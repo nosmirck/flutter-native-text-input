@@ -54,6 +54,9 @@
             _textView.autocorrectionType = [args[@"autocorrect"] boolValue]
               ? UITextAutocorrectionTypeYes
               : UITextAutocorrectionTypeNo;
+            _textView.spellCheckingType = [args[@"autocorrect"] boolValue]
+              ? UITextSpellCheckingTypeYes
+              : UITextSpellCheckingTypeNo;
         }
 
         _delegate = [[NativeTextInputDelegate alloc] initWithChannel:_channel arguments:args ];
